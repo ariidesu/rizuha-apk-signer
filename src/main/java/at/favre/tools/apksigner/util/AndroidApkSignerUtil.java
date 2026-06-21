@@ -41,7 +41,8 @@ public final class AndroidApkSignerUtil {
             }
         }
 
-        args.add("--v4-signing-enabled");
+        args.add("--v1-signing-enabled");
+        args.add("false");
 
         args.add(targetApkFile.getAbsolutePath());
 
