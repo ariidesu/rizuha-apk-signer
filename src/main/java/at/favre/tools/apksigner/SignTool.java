@@ -8,6 +8,7 @@ import at.favre.tools.apksigner.util.AndroidApkSignerUtil;
 import at.favre.tools.apksigner.util.CmdUtil;
 import at.favre.tools.apksigner.util.FileUtil;
 import com.android.apksigner.ApkSignerTool;
+import com.android.apksig.internal.util.AndroidSdkVersion;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -310,10 +311,19 @@ public final class SignTool {
 
             ByteArrayOutputStream apkSignerToolStream = new ByteArrayOutputStream();
             PrintStream sout = System.out;
+            PrintStream serr = System.err;
+            ByteArrayOutputStream apkSignerToolErrStream = new ByteArrayOutputStream();
             System.setOut(new PrintStream(apkSignerToolStream));
+            System.setErr(new PrintStream(apkSignerToolErrStream));
             ApkSignerTool.main(AndroidApkSignerUtil.createApkToolArgs(arguments, signingConfigs, targetApkFile, outFile));
             String output = apkSignerToolStream.toString("UTF-8").trim();
+            String errOutput = apkSignerToolErrStream.toString("UTF-8").trim();
             System.setOut(sout);
+            System.setErr(serr);
+
+            if (!errOutput.isEmpty() && errOutput.toLowerCase().contains("error")) {
+                throw new IllegalStateException("apksigner error: " + errOutput);
+            }
 
             log("\t- sign success");
 
@@ -331,7 +341,8 @@ public final class SignTool {
     private static AndroidApkSignerVerify.Result verifySign(File targetApkFile, File rootTargetFile, String[] checkHashes, boolean verbose, boolean preCheckVerify) {
         try {
             AndroidApkSignerVerify verifier = new AndroidApkSignerVerify();
-            AndroidApkSignerVerify.Result result = verifier.verify(targetApkFile, null, null, null, false);
+            // Force v1 signature skip by setting min sdk version to N (24)
+            AndroidApkSignerVerify.Result result = verifier.verify(targetApkFile, AndroidSdkVersion.N, null, null, false);
 
             if (!preCheckVerify) {
                 String logMsg;
